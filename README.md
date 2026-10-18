@@ -1,18 +1,28 @@
 <div align="center">
 
-# VSCode z.ai Usage Plus
+# Z.ai GLM Usage Plus
 
-![Status bar example](./assets/screenshots/statusbar.png)
+**`full`**
+
+![Full display style](./assets/screenshots/style-full.png)
+
+**`condensed`**
+
+![Condensed display style](./assets/screenshots/style-condensed.png)
+
+**`ultra`**
+
+![Ultra display style](./assets/screenshots/style-ultra.png)
 
 > [!NOTE]
-> This is a fork of [j4rviscmd/vscode-zai-usage](https://github.com/j4rviscmd/vscode-zai-usage) — all credit for the original extension goes to [@j4rviscmd](https://github.com/j4rviscmd). This fork adds weekly quota display and extra display settings under the name **VSCode z.ai Usage Plus**.
+> This is a fork of [j4rviscmd/vscode-zai-usage](https://github.com/j4rviscmd/vscode-zai-usage) — all credit for the original extension goes to [@j4rviscmd](https://github.com/j4rviscmd). This fork adds weekly and MCP quota display and extra display settings under the name **Z.ai GLM Usage Plus**.
 
-[![Latest Release](https://img.shields.io/github/v/release/demartis/vscode-zai-usage?style=for-the-badge&color=green&label=Latest&logo=github&logoColor=white)](https://github.com/demartis/vscode-zai-usage/releases/latest)
-[![Last Commit](https://img.shields.io/github/last-commit/demartis/vscode-zai-usage/main?style=for-the-badge&color=1F6FEB&label=Last%20Update&logo=github&logoColor=white)](https://github.com/demartis/vscode-zai-usage/commits/main)
+[![Latest Release](https://img.shields.io/github/v/release/demartis/vscode-zai-usage-plus?style=for-the-badge&color=green&label=Latest&logo=github&logoColor=white)](https://github.com/demartis/vscode-zai-usage-plus/releases/latest)
+[![Last Commit](https://img.shields.io/github/last-commit/demartis/vscode-zai-usage-plus/main?style=for-the-badge&color=1F6FEB&label=Last%20Update&logo=github&logoColor=white)](https://github.com/demartis/vscode-zai-usage-plus/commits/main)
 [![License](https://img.shields.io/badge/License-MIT-018FF5?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 
 <!-- markdownlint-disable-next-line -->
-### Display your [GLM Coding Plan](https://z.ai/subscribe) 5-hour **and weekly** usage directly in the VS Code status bar
+### Display your [GLM Coding Plan](https://z.ai/subscribe) 5-hour, weekly, **and MCP** usage directly in the VS Code status bar
 
 </div>
 

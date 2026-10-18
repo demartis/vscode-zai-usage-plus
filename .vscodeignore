@@ -10,6 +10,7 @@ biome.json
 .github/**
 CLAUDE.md
 assets/icons/**
+assets/screenshots/**
 assets/fonts/*.css
 assets/fonts/*.html
 assets/fonts/*.json
