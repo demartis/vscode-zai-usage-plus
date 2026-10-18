@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-18
+
+Forked from [j4rviscmd/vscode-zai-usage](https://github.com/j4rviscmd/vscode-zai-usage) v0.4.0 as **vscode-zai-usage-plus**.
+
+### Added
+
+- Weekly token usage in the status bar, next to the 5-hour window (e.g. `⬡ 45% (2h30m) | Week: 12% (3d12h)`), with its own reset countdown in the tooltip
+- Display style setting (`zaiUsagePlus.displayStyle`): `"full"` with reset countdowns or `"condensed"` with bare percentages
+- Weekly visibility setting (`zaiUsagePlus.showWeekly`, default `true`) to hide the weekly window
+- Reset countdowns now render windows longer than a day as `(3d12h)` instead of `(84h12m)`
+
+### Changed
+
+- Renamed extension to `vscode-zai-usage-plus` (publisher `demartis`); configuration namespace and command IDs moved from `zaiUsage.*` to `zaiUsagePlus.*`
+
 ## [0.4.0] - 2026-05-22
 
 ### Added
