@@ -6,6 +6,11 @@ import * as vscode from "vscode";
 interface ZaiLimit {
   /** The type identifier of the limit (e.g. `"TOKENS_LIMIT"`). */
   type: string;
+  /**
+   * Window length unit of this limit: `1` = days, `3` = hours, `5` = minutes,
+   * `6` = weeks. The weekly quota is the entry with `unit: 6`.
+   */
+  unit?: number;
   /** The current usage as a decimal percentage (e.g. `0.753` means 75.3 %). */
   percentage: number;
   /** Unix timestamp (ms) at which this limit will reset. */
@@ -48,6 +53,19 @@ interface UsageData {
   /** Rounded token usage percentage (one decimal place, e.g. `75.3`). */
   percentage: number;
   /** Unix timestamp (ms) of the next quota reset, or `null` if unknown. */
+  nextResetTime: number | null;
+  /** Weekly window statistics, or `null` when the response has no weekly entry. */
+  weekly: WeeklyUsage | null;
+}
+
+/**
+ * Weekly token-usage statistics, taken from the weekly (`unit: 6`) entry
+ * of the quota limits array.
+ */
+interface WeeklyUsage {
+  /** Rounded token usage percentage (one decimal place, e.g. `75.3`). */
+  percentage: number;
+  /** Unix timestamp (ms) of the next weekly reset, or `null` if unknown. */
   nextResetTime: number | null;
 }
 
@@ -139,9 +157,26 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   /**
+   * Maps a raw quota limit entry to simplified usage statistics.
+   *
+   * @param limit - The raw {@link ZaiLimit} entry to map.
+   * @returns The rounded usage percentage and next reset timestamp.
+   */
+  function toUsage(limit: ZaiLimit): {
+    percentage: number;
+    nextResetTime: number | null;
+  } {
+    return {
+      percentage: Math.round(limit.percentage * 10) / 10,
+      nextResetTime: limit.nextResetTime ?? null,
+    };
+  }
+
+  /**
    * Extracts token-usage statistics from a raw API response.
-   * Looks for the `TOKENS_LIMIT` entry inside `data.limits` and maps it to a
-   * simplified {@link UsageData} object.
+   * Looks for the `TOKENS_LIMIT` (5-hour window) entry inside `data.limits` and
+   * maps it to a simplified {@link UsageData} object; when the response also
+   * contains a weekly (`unit: 6`) entry, it is exposed via `usage.weekly`.
    *
    * @param data - The raw {@link ZaiApiResponse} returned by the z.ai quota API.
    * @returns A {@link UsageData} object containing the usage percentage and next reset
@@ -158,9 +193,12 @@ export function activate(context: vscode.ExtensionContext): void {
       return null;
     }
 
+    // The weekly window is a separate entry in the same limits array.
+    const weeklyLimit = limits.find((l) => l.unit === 6);
+
     return {
-      percentage: Math.round(tokenLimit.percentage * 10) / 10,
-      nextResetTime: tokenLimit.nextResetTime ?? null,
+      ...toUsage(tokenLimit),
+      weekly: weeklyLimit ? toUsage(weeklyLimit) : null,
     };
   }
 
@@ -194,7 +232,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
   /**
    * Formats the time remaining until the next usage quota reset into a short
-   * human-readable string such as `"(2h30m)"` or `"(45m)"`.
+   * human-readable string such as `"(2h30m)"`, `"(45m)"`, or `"(3d12h)"`
+   * for windows longer than a day.
    *
    * Returns an empty string when `nextResetTime` is falsy, non-positive, or
    * already in the past.
@@ -215,8 +254,13 @@ export function activate(context: vscode.ExtensionContext): void {
     const diffHours = Math.floor(diffSec / 3600);
     const diffMins = Math.floor((diffSec % 3600) / 60);
     const parts: string[] = [];
-    if (diffHours > 0) parts.push(`${diffHours}h`);
-    parts.push(`${diffMins}m`);
+    if (diffHours >= 24) {
+      parts.push(`${Math.floor(diffHours / 24)}d`);
+      parts.push(`${diffHours % 24}h`);
+    } else {
+      if (diffHours > 0) parts.push(`${diffHours}h`);
+      parts.push(`${diffMins}m`);
+    }
     return `(${parts.join("")})`;
   }
 
@@ -371,6 +415,42 @@ export function activate(context: vscode.ExtensionContext): void {
    *
    * @returns A promise that resolves once the status bar has been updated.
    */
+  /**
+   * Converts a usage percentage to the value shown in the status bar, taking the
+   * display mode into account.
+   *
+   * @param percentage - The usage percentage (0-100) as returned by the API.
+   * @param isRemaining - Whether the "remaining" display mode is active.
+   * @returns The display percentage (one decimal place).
+   */
+  function toDisplayPercentage(
+    percentage: number,
+    isRemaining: boolean,
+  ): number {
+    return isRemaining ? Math.round((100 - percentage) * 10) / 10 : percentage;
+  }
+
+  /**
+   * Builds the weekly portion of the status bar label, e.g. `" | Week: 12% (3d12h)"`.
+   *
+   * Returns an empty string when there is no weekly entry in the API response.
+   *
+   * @param weekly - The {@link WeeklyUsage} from the API, or `null`.
+   * @param isRemaining - Whether the "remaining" display mode is active.
+   * @returns The weekly label fragment, or `""` when unavailable.
+   */
+  function formatWeeklySuffix(
+    weekly: WeeklyUsage | null,
+    isRemaining: boolean,
+  ): string {
+    if (!weekly) {
+      return "";
+    }
+    const resetStr = formatResetTime(weekly.nextResetTime);
+    const percentage = toDisplayPercentage(weekly.percentage, isRemaining);
+    return ` | Week: ${percentage}%${resetStr ? ` ${resetStr}` : ""}`;
+  }
+
   async function updateStatusBar(): Promise<void> {
     const { usage, apiCalled, noApiKey } = await fetchUsage();
 
@@ -393,21 +473,34 @@ export function activate(context: vscode.ExtensionContext): void {
 
       // Calculate display percentage based on display mode
       const isRemaining = displayMode === "remaining";
-      const displayPercentage = isRemaining
-        ? Math.round((100 - usage.percentage) * 10) / 10
-        : usage.percentage;
+      const displayPercentage = toDisplayPercentage(
+        usage.percentage,
+        isRemaining,
+      );
 
       const suffix = resetStr
         ? `${displayPercentage}% ${resetStr}`
         : `${displayPercentage}%`;
-      statusBarItem.text = getLabel(suffix);
+      statusBarItem.text = getLabel(
+        suffix + formatWeeklySuffix(usage.weekly, isRemaining),
+      );
 
       // Build tooltip text
       const resetTooltip = resetStr
         ? ` — resets in ${resetStr.replace(/[()]/g, "")}`
         : "";
+      const weeklyResetStr = usage.weekly
+        ? formatResetTime(usage.weekly.nextResetTime)
+        : "";
+      const weeklyTooltip = usage.weekly
+        ? `\nWeekly ${displayMode}: ${toDisplayPercentage(usage.weekly.percentage, isRemaining)}%` +
+          (weeklyResetStr
+            ? ` — resets in ${weeklyResetStr.replace(/[()]/g, "")}`
+            : "")
+        : "";
       statusBarItem.tooltip =
-        `z.ai token ${displayMode}: ${displayPercentage}%${resetTooltip} ` +
+        `z.ai token ${displayMode}: ${displayPercentage}%${resetTooltip}` +
+        weeklyTooltip +
         `\n(auto-refreshes every ${refreshSec}s. click to refresh immediately)`;
     }
 
