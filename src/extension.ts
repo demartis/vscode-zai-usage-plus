@@ -424,26 +424,27 @@ export function activate(context: vscode.ExtensionContext): void {
    * Builds the label fragment for an optional quota window, e.g.
    * `" | Week: 12% (3d12h)"` or `" | MCP: 5% (12d4h)"`.
    *
-   * Returns an empty string when the window entry is absent; in condensed style
-   * the reset countdown is omitted.
+   * Returns an empty string when the window entry is absent; when
+   * `includeReset` is `false` (ultra-condensed style) the reset countdown
+   * is omitted.
    *
-   * @param label - The window name shown in the label (e.g. `"Week"`, `"MCP"`).
+   * @param label - The window name shown in the label (e.g. `"Week"`, `"W"`, `"MCP"`).
    * @param usage - The {@link WindowUsage} for this window, or `null`.
    * @param isRemaining - Whether the "remaining" display mode is active.
-   * @param isCondensed - Whether the "condensed" display style is active.
+   * @param includeReset - Whether to append the reset countdown.
    * @returns The label fragment, or `""` when unavailable.
    */
   function formatWindowSuffix(
     label: string,
     usage: WindowUsage | null,
     isRemaining: boolean,
-    isCondensed: boolean,
+    includeReset: boolean,
   ): string {
     if (!usage) {
       return "";
     }
     const percentage = toDisplayPercentage(usage.percentage, isRemaining);
-    const resetStr = isCondensed ? "" : formatResetTime(usage.nextResetTime);
+    const resetStr = includeReset ? formatResetTime(usage.nextResetTime) : "";
     return ` | ${label}: ${percentage}%${resetStr ? ` ${resetStr}` : ""}`;
   }
 
@@ -456,8 +457,9 @@ export function activate(context: vscode.ExtensionContext): void {
    * - **Success**: renders the usage percentage and optional reset countdown; also
    *   shows a tooltip with full details and the configured refresh interval.
    *
-   * The `displayStyle` setting controls the label verbosity: "full" shows
-   * percentages with reset countdowns, "condensed" shows bare percentages.
+   * The `displayStyle` setting controls the label verbosity: "full" shows full
+   * window labels with reset countdowns, "condensed" shows short window labels
+   * with reset countdowns, and "ultra" shows short labels with bare percentages.
    * The `showWeekly` and `showMcp` settings toggle the weekly and MCP
    * windows on or off.
    *
@@ -491,23 +493,30 @@ export function activate(context: vscode.ExtensionContext): void {
 
       // Calculate display percentage based on display mode
       const isRemaining = displayMode === "remaining";
-      const isCondensed = displayStyle === "condensed";
+      // "ultra" drops the reset countdowns; non-"full" styles use short window labels
+      const isUltra = displayStyle === "ultra";
+      const shortLabels = displayStyle !== "full";
       const displayPercentage = toDisplayPercentage(
         usage.percentage,
         isRemaining,
       );
 
-      const suffix = isCondensed
+      const suffix = isUltra
         ? `${displayPercentage}%`
         : resetStr
           ? `${displayPercentage}% ${resetStr}`
           : `${displayPercentage}%`;
       const extraSuffix =
         (showWeekly
-          ? formatWindowSuffix("Week", usage.weekly, isRemaining, isCondensed)
+          ? formatWindowSuffix(
+              shortLabels ? "W" : "Week",
+              usage.weekly,
+              isRemaining,
+              !isUltra,
+            )
           : "") +
         (showMcp
-          ? formatWindowSuffix("MCP", usage.mcp, isRemaining, isCondensed)
+          ? formatWindowSuffix("MCP", usage.mcp, isRemaining, !isUltra)
           : "");
       statusBarItem.text = getLabel(suffix + extraSuffix);
 

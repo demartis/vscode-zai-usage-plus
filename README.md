@@ -33,7 +33,8 @@
 | Authenticated, usage available           | `Z 45% (2h30m) | Week: 12% (3d12h)` |
 | Authenticated, no reset times            | `Z 45% | Week: 12%`                |
 | Authenticated, remaining mode            | `Z 55% (2h30m) | Week: 88% (3d12h)` |
-| Authenticated, condensed style           | `Z 45% | Week: 12%`                |
+| Authenticated, condensed style           | `Z 45% (2h30m) | W: 12% (3d12h)`   |
+| Authenticated, ultra-condensed style     | `Z 45% | W: 12%`                   |
 | Authenticated, with MCP quota            | `Z 45% (2h30m) | Week: 12% (3d12h) | MCP: 5% (12d4h)` |
 | Authenticated, weekly hidden             | `Z 45% (2h30m)`                    |
 | No weekly entry in API response          | `Z 45% (2h30m)`                    |
@@ -64,7 +65,7 @@
 | `zaiUsagePlus.refreshInterval`     | `number`  | `60`      | Data refresh interval in seconds                                                         |
 | `zaiUsagePlus.useIcon`             | `boolean` | `true`    | Use z.ai icon (`⬡`) instead of text prefix `z.ai:`                                       |
 | `zaiUsagePlus.displayMode`         | `string`  | `usage`   | Display mode: `"usage"` (e.g. `75.3%`) or `"remaining"` (e.g. `24.7%`)                   |
-| `zaiUsagePlus.displayStyle`        | `string`  | `full`    | Label verbosity: `"full"` (e.g. `45% (2h30m)`) or `"condensed"` (e.g. `45%`)             |
+| `zaiUsagePlus.displayStyle`        | `string`  | `full`    | Label verbosity: `"full"` (`45% (2h30m) | Week: 12%`), `"condensed"` (`45% (2h30m) | W: 12%`), or `"ultra"` (`45% | W: 12%`) |
 | `zaiUsagePlus.showWeekly`          | `boolean` | `true`    | Show the weekly usage alongside the 5-hour usage                                         |
 | `zaiUsagePlus.showMcp`             | `boolean` | `true`    | Show the MCP quota alongside the other windows                                           |
 | `zaiUsagePlus.statusBarPriority`   | `number`  | `10000`   | Status bar item priority (higher = further left; requires a window reload)               |
