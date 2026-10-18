@@ -54,9 +54,9 @@ interface UsageData {
 /** Schema version embedded in every cache entry; increment to bust old caches. */
 const CACHE_VERSION = "1.0";
 /** Key used to store the cache object in `vscode.ExtensionContext.globalState`. */
-const CACHE_KEY = "zaiUsage.cache";
+const CACHE_KEY = "zaiUsagePlus.cache";
 /** Key used to store the API key in `vscode.ExtensionContext.secrets`. */
-const API_KEY_SECRET = "zaiUsage.apiKey";
+const API_KEY_SECRET = "zaiUsagePlus.apiKey";
 /** The z.ai quota/limit API endpoint. */
 const API_URL = "https://api.z.ai/api/monitor/usage/quota/limit";
 
@@ -66,7 +66,7 @@ const API_URL = "https://api.z.ai/api/monitor/usage/quota/limit";
  */
 export function activate(context: vscode.ExtensionContext): void {
   const priority = vscode.workspace
-    .getConfiguration("zaiUsage")
+    .getConfiguration("zaiUsagePlus")
     .get<number>("statusBarPriority", 10000);
 
   const statusBarItem = vscode.window.createStatusBarItem(
@@ -86,7 +86,7 @@ export function activate(context: vscode.ExtensionContext): void {
    */
   function getRefreshInterval(): number {
     const seconds = vscode.workspace
-      .getConfiguration("zaiUsage")
+      .getConfiguration("zaiUsagePlus")
       .get<number>("refreshInterval", 60);
     // Clamp to a minimum of 10 seconds to prevent API flooding from invalid config values.
     return Math.max(seconds, 10) * 1000;
@@ -101,7 +101,7 @@ export function activate(context: vscode.ExtensionContext): void {
    */
   function getLabel(suffix: string): string {
     const useIcon = vscode.workspace
-      .getConfiguration("zaiUsage")
+      .getConfiguration("zaiUsagePlus")
       .get<boolean>("useIcon", true);
     const prefix = useIcon ? "$(zai-icon)" : "z.ai:";
     return `${prefix} ${suffix}`;
@@ -240,7 +240,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       if (!response.ok) {
         console.error(
-          "[z.ai Usage] API HTTP error:",
+          "[z.ai Usage Plus] API HTTP error:",
           response.status,
           await response.text(),
         );
@@ -251,13 +251,17 @@ export function activate(context: vscode.ExtensionContext): void {
 
       // The API may return an authentication error within a 200 response — always inspect the payload.
       if (data.success === false) {
-        console.error("[z.ai Usage] API error response:", data.code, data.msg);
+        console.error(
+          "[z.ai Usage Plus] API error response:",
+          data.code,
+          data.msg,
+        );
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error("[z.ai Usage] Error:", error);
+      console.error("[z.ai Usage Plus] Error:", error);
       return null;
     }
   }
@@ -341,13 +345,13 @@ export function activate(context: vscode.ExtensionContext): void {
   /**
    * Configures the status bar item to reflect the "no API key" state.
    *
-   * Sets the item's label to "Set API Key" and attaches the `zaiUsage.setApiKey`
+   * Sets the item's label to "Set API Key" and attaches the `zaiUsagePlus.setApiKey`
    * command so that clicking the item opens the API key input prompt.
    *
    * @returns `void`
    */
   function applyNoApiKeyState(): void {
-    statusBarItem.command = "zaiUsage.setApiKey";
+    statusBarItem.command = "zaiUsagePlus.setApiKey";
     statusBarItem.text = getLabel("Set API Key");
     statusBarItem.tooltip = "Click to set your z.ai API key";
   }
@@ -373,18 +377,18 @@ export function activate(context: vscode.ExtensionContext): void {
     if (noApiKey) {
       applyNoApiKeyState();
     } else if (usage === null) {
-      statusBarItem.command = "zaiUsage.updateStatusBar";
+      statusBarItem.command = "zaiUsagePlus.updateStatusBar";
       statusBarItem.text = getLabel("-");
       statusBarItem.tooltip =
         "Unable to fetch z.ai usage data (click to refresh)";
     } else {
-      statusBarItem.command = "zaiUsage.updateStatusBar";
+      statusBarItem.command = "zaiUsagePlus.updateStatusBar";
       const refreshSec = getRefreshInterval() / 1000;
       const resetStr = formatResetTime(usage.nextResetTime);
 
       // Get display mode setting (default: "usage")
       const displayMode = vscode.workspace
-        .getConfiguration("zaiUsage")
+        .getConfiguration("zaiUsagePlus")
         .get<string>("displayMode", "usage");
 
       // Calculate display percentage based on display mode
@@ -413,14 +417,14 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   /**
-   * Handles the `zaiUsage.setApiKey` command.
+   * Handles the `zaiUsagePlus.setApiKey` command.
    *
    * Prompts the user for a Bearer token, verifies it against the z.ai API,
    * and — on success — persists it to the secret store and refreshes the status bar.
    * On verification failure the stored key and cache are both cleared.
    */
   const setApiKeyCmd = vscode.commands.registerCommand(
-    "zaiUsage.setApiKey",
+    "zaiUsagePlus.setApiKey",
     async () => {
       const apiKey = await vscode.window.showInputBox({
         prompt: "Enter your z.ai API key",
@@ -440,7 +444,7 @@ export function activate(context: vscode.ExtensionContext): void {
         await context.secrets.delete(API_KEY_SECRET);
         await context.globalState.update(CACHE_KEY, undefined);
         vscode.window.showErrorMessage(
-          "z.ai Usage: Failed to verify API key. Please check the key and try again.",
+          "z.ai Usage Plus: Failed to verify API key. Please check the key and try again.",
         );
         await updateStatusBar();
         return;
@@ -449,7 +453,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await context.secrets.store(API_KEY_SECRET, apiKey);
       setCache(result);
       vscode.window.showInformationMessage(
-        "z.ai Usage: API key saved successfully.",
+        "z.ai Usage Plus: API key saved successfully.",
       );
       await updateStatusBar();
       startInterval();
@@ -457,23 +461,23 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   /**
-   * Handles the `zaiUsage.clearApiKey` command.
+   * Handles the `zaiUsagePlus.clearApiKey` command.
    *
    * Removes the stored API key from the secret store, clears the usage cache,
    * and transitions the status bar to the "no API key" state.
    */
   const clearApiKeyCmd = vscode.commands.registerCommand(
-    "zaiUsage.clearApiKey",
+    "zaiUsagePlus.clearApiKey",
     async () => {
       await context.secrets.delete(API_KEY_SECRET);
       await context.globalState.update(CACHE_KEY, undefined);
       applyNoApiKeyState();
-      vscode.window.showInformationMessage("z.ai Usage: API key cleared.");
+      vscode.window.showInformationMessage("z.ai Usage Plus: API key cleared.");
     },
   );
 
   /**
-   * Handles the `zaiUsage.updateStatusBar` command.
+   * Handles the `zaiUsagePlus.updateStatusBar` command.
    *
    * Manually refreshes the status bar by calling {@link updateStatusBar}.
    * This command can be bound to the status bar item or triggered via command palette.
@@ -481,7 +485,7 @@ export function activate(context: vscode.ExtensionContext): void {
    * Shows a loading indicator for at least 400ms to prevent flickering.
    */
   const updateStatusBarCmd = vscode.commands.registerCommand(
-    "zaiUsage.updateStatusBar",
+    "zaiUsagePlus.updateStatusBar",
     async () => {
       statusBarItem.text = "$(loading~spin) Refreshing...";
       // Wait at least 400ms to prevent flickering
@@ -501,27 +505,27 @@ export function activate(context: vscode.ExtensionContext): void {
     /**
      * Listens for workspace configuration changes and re-applies them immediately.
      *
-     * When `zaiUsage.refreshInterval`, `zaiUsage.useIcon`, or `zaiUsage.displayMode` changes,
+     * When `zaiUsagePlus.refreshInterval`, `zaiUsagePlus.useIcon`, or `zaiUsagePlus.displayMode` changes,
      * the status bar is refreshed and the polling interval is restarted so the new settings take
      * effect without requiring a window reload.
      *
-     * When `zaiUsage.statusBarPriority` changes, the user is notified that a window
+     * When `zaiUsagePlus.statusBarPriority` changes, the user is notified that a window
      * reload is required for the new priority to take effect, because the priority is
      * set at status bar item creation time and cannot be changed at runtime.
      */
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (
-        e.affectsConfiguration("zaiUsage.refreshInterval") ||
-        e.affectsConfiguration("zaiUsage.useIcon") ||
-        e.affectsConfiguration("zaiUsage.displayMode")
+        e.affectsConfiguration("zaiUsagePlus.refreshInterval") ||
+        e.affectsConfiguration("zaiUsagePlus.useIcon") ||
+        e.affectsConfiguration("zaiUsagePlus.displayMode")
       ) {
         updateStatusBar();
         startInterval();
       }
-      if (e.affectsConfiguration("zaiUsage.statusBarPriority")) {
+      if (e.affectsConfiguration("zaiUsagePlus.statusBarPriority")) {
         void (async () => {
           const selection = await vscode.window.showInformationMessage(
-            "z.ai Usage: Status bar priority changed. Reload the window to apply.",
+            "z.ai Usage Plus: Status bar priority changed. Reload the window to apply.",
             "Reload Window",
           );
           if (selection === "Reload Window") {

@@ -1,14 +1,14 @@
 {
-  "name": "vscode-zai-usage",
-  "displayName": "VSCode z.ai Usage",
+  "name": "vscode-zai-usage-plus",
+  "displayName": "VSCode z.ai Usage Plus",
   "description": "Display z.ai token usage in the status bar",
-  "version": "0.4.0",
-  "publisher": "j4rviscmd",
+  "version": "0.5.0",
+  "publisher": "demartis",
   "license": "MIT",
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/j4rviscmd/vscode-zai-usage.git"
+    "url": "https://github.com/demartis/vscode-zai-usage.git"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -45,38 +45,38 @@
     },
     "commands": [
       {
-        "command": "zaiUsage.setApiKey",
-        "title": "z.ai Usage: Set API Key"
+        "command": "zaiUsagePlus.setApiKey",
+        "title": "z.ai Usage Plus: Set API Key"
       },
       {
-        "command": "zaiUsage.clearApiKey",
-        "title": "z.ai Usage: Clear API Key"
+        "command": "zaiUsagePlus.clearApiKey",
+        "title": "z.ai Usage Plus: Clear API Key"
       },
       {
-        "command": "zaiUsage.updateStatusBar",
-        "title": "z.ai Usage: Refresh Status Bar"
+        "command": "zaiUsagePlus.updateStatusBar",
+        "title": "z.ai Usage Plus: Refresh Status Bar"
       }
     ],
     "configuration": {
-      "title": "z.ai Usage",
+      "title": "z.ai Usage Plus",
       "properties": {
-        "zaiUsage.refreshInterval": {
+        "zaiUsagePlus.refreshInterval": {
           "type": "number",
           "default": 60,
           "minimum": 10,
           "description": "Data refresh interval in seconds (minimum: 10, default: 60)"
         },
-        "zaiUsage.useIcon": {
+        "zaiUsagePlus.useIcon": {
           "type": "boolean",
           "default": true,
           "description": "Use z.ai icon in status bar instead of text label 'z.ai:'"
         },
-        "zaiUsage.statusBarPriority": {
+        "zaiUsagePlus.statusBarPriority": {
           "type": "number",
           "default": 10000,
-          "description": "Priority of the z.ai Usage item in the status bar (higher = further left among right-aligned items). Change takes effect after reloading the window."
+          "description": "Priority of the z.ai Usage Plus item in the status bar (higher = further left among right-aligned items). Change takes effect after reloading the window."
         },
-        "zaiUsage.displayMode": {
+        "zaiUsagePlus.displayMode": {
           "type": "string",
           "enum": ["usage", "remaining"],
           "default": "usage",

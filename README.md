@@ -1,8 +1,11 @@
 <div align="center">
 
-# VSCode z.ai Usage
+# VSCode z.ai Usage Plus
 
 ![Status bar example](./assets/screenshots/statusbar.png)
+
+> [!NOTE]
+> This is a fork of [j4rviscmd/vscode-zai-usage](https://github.com/j4rviscmd/vscode-zai-usage) — all credit for the original extension goes to [@j4rviscmd](https://github.com/j4rviscmd). This fork adds weekly quota display and extra display settings under the name **VSCode z.ai Usage Plus**.
 
 [![Latest Release](https://img.shields.io/github/v/release/j4rviscmd/vscode-zai-usage?style=for-the-badge&color=green&label=Latest&logo=github&logoColor=white)](https://github.com/j4rviscmd/vscode-zai-usage/releases/latest)
 [![Last Commit](https://img.shields.io/github/last-commit/j4rviscmd/vscode-zai-usage/main?style=for-the-badge&color=1F6FEB&label=Last%20Update&logo=git&logoColor=white)](https://github.com/j4rviscmd/vscode-zai-usage/commits/main)
