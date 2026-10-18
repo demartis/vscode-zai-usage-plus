@@ -100,6 +100,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show the weekly token usage alongside the 5-hour usage in the status bar."
+        },
+        "zaiUsagePlus.showMcp": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the MCP quota alongside the other windows in the status bar."
         }
       }
     }

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-10-18
+
+### Added
+
+- MCP quota display in the status bar (e.g. `| MCP: 5% (12d4h)`) with its own reset countdown in the tooltip, toggleable via `zaiUsagePlus.showMcp` (default `true`)
+
+### Changed
+
+- Renamed display name to "Z.ai GLM Usage Plus"; repository moved to `demartis/vscode-zai-usage-plus`
+
 ## [0.5.0] - 2026-10-18
 
 Forked from [j4rviscmd/vscode-zai-usage](https://github.com/j4rviscmd/vscode-zai-usage) v0.4.0 as **vscode-zai-usage-plus**.

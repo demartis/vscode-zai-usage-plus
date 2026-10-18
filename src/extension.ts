@@ -55,17 +55,19 @@ interface UsageData {
   /** Unix timestamp (ms) of the next quota reset, or `null` if unknown. */
   nextResetTime: number | null;
   /** Weekly window statistics, or `null` when the response has no weekly entry. */
-  weekly: WeeklyUsage | null;
+  weekly: WindowUsage | null;
+  /** MCP window statistics, or `null` when the response has no MCP entry. */
+  mcp: WindowUsage | null;
 }
 
 /**
- * Weekly token-usage statistics, taken from the weekly (`unit: 6`) entry
- * of the quota limits array.
+ * Usage statistics for a single quota window (weekly, MCP, …), taken from
+ * the corresponding entry of the quota limits array.
  */
-interface WeeklyUsage {
+interface WindowUsage {
   /** Rounded token usage percentage (one decimal place, e.g. `75.3`). */
   percentage: number;
-  /** Unix timestamp (ms) of the next weekly reset, or `null` if unknown. */
+  /** Unix timestamp (ms) of the next reset for this window, or `null` if unknown. */
   nextResetTime: number | null;
 }
 
@@ -176,7 +178,8 @@ export function activate(context: vscode.ExtensionContext): void {
    * Extracts token-usage statistics from a raw API response.
    * Looks for the `TOKENS_LIMIT` (5-hour window) entry inside `data.limits` and
    * maps it to a simplified {@link UsageData} object; when the response also
-   * contains a weekly (`unit: 6`) entry, it is exposed via `usage.weekly`.
+   * contains a weekly (`unit: 6`) or MCP (`TIME_LIMIT`) entry, they are exposed
+   * via `usage.weekly` and `usage.mcp`.
    *
    * @param data - The raw {@link ZaiApiResponse} returned by the z.ai quota API.
    * @returns A {@link UsageData} object containing the usage percentage and next reset
@@ -193,12 +196,14 @@ export function activate(context: vscode.ExtensionContext): void {
       return null;
     }
 
-    // The weekly window is a separate entry in the same limits array.
+    // The weekly and MCP windows are separate entries in the same limits array.
     const weeklyLimit = limits.find((l) => l.unit === 6);
+    const mcpLimit = limits.find((l) => l.type === "TIME_LIMIT");
 
     return {
       ...toUsage(tokenLimit),
       weekly: weeklyLimit ? toUsage(weeklyLimit) : null,
+      mcp: mcpLimit ? toUsage(mcpLimit) : null,
     };
   }
 
@@ -416,27 +421,30 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   /**
-   * Builds the weekly portion of the status bar label, e.g. `" | Week: 12% (3d12h)"`.
+   * Builds the label fragment for an optional quota window, e.g.
+   * `" | Week: 12% (3d12h)"` or `" | MCP: 5% (12d4h)"`.
    *
-   * Returns an empty string when the weekly entry is absent or hidden by the
-   * `showWeekly` setting; in condensed style the reset countdown is omitted.
+   * Returns an empty string when the window entry is absent; in condensed style
+   * the reset countdown is omitted.
    *
-   * @param weekly - The {@link WeeklyUsage} from the API, or `null`.
+   * @param label - The window name shown in the label (e.g. `"Week"`, `"MCP"`).
+   * @param usage - The {@link WindowUsage} for this window, or `null`.
    * @param isRemaining - Whether the "remaining" display mode is active.
    * @param isCondensed - Whether the "condensed" display style is active.
-   * @returns The weekly label fragment, or `""` when unavailable or hidden.
+   * @returns The label fragment, or `""` when unavailable.
    */
-  function formatWeeklySuffix(
-    weekly: WeeklyUsage | null,
+  function formatWindowSuffix(
+    label: string,
+    usage: WindowUsage | null,
     isRemaining: boolean,
     isCondensed: boolean,
   ): string {
-    if (!weekly) {
+    if (!usage) {
       return "";
     }
-    const percentage = toDisplayPercentage(weekly.percentage, isRemaining);
-    const resetStr = isCondensed ? "" : formatResetTime(weekly.nextResetTime);
-    return ` | Week: ${percentage}%${resetStr ? ` ${resetStr}` : ""}`;
+    const percentage = toDisplayPercentage(usage.percentage, isRemaining);
+    const resetStr = isCondensed ? "" : formatResetTime(usage.nextResetTime);
+    return ` | ${label}: ${percentage}%${resetStr ? ` ${resetStr}` : ""}`;
   }
 
   /**
@@ -450,7 +458,8 @@ export function activate(context: vscode.ExtensionContext): void {
    *
    * The `displayStyle` setting controls the label verbosity: "full" shows
    * percentages with reset countdowns, "condensed" shows bare percentages.
-   * The `showWeekly` setting toggles the weekly window on or off.
+   * The `showWeekly` and `showMcp` settings toggle the weekly and MCP
+   * windows on or off.
    *
    * After a successful live API call ({@link fetchUsage} returns `apiCalled: true`),
    * the polling interval is restarted via {@link startInterval} so that the next
@@ -474,10 +483,11 @@ export function activate(context: vscode.ExtensionContext): void {
       const resetStr = formatResetTime(usage.nextResetTime);
 
       const config = vscode.workspace.getConfiguration("zaiUsagePlus");
-      // Get display settings (defaults: "usage" mode, "full" style, weekly shown)
+      // Get display settings (defaults: "usage" mode, "full" style, weekly + MCP shown)
       const displayMode = config.get<string>("displayMode", "usage");
       const displayStyle = config.get<string>("displayStyle", "full");
       const showWeekly = config.get<boolean>("showWeekly", true);
+      const showMcp = config.get<boolean>("showMcp", true);
 
       // Calculate display percentage based on display mode
       const isRemaining = displayMode === "remaining";
@@ -492,30 +502,39 @@ export function activate(context: vscode.ExtensionContext): void {
         : resetStr
           ? `${displayPercentage}% ${resetStr}`
           : `${displayPercentage}%`;
-      statusBarItem.text = getLabel(
-        suffix +
-          (showWeekly
-            ? formatWeeklySuffix(usage.weekly, isRemaining, isCondensed)
-            : ""),
-      );
+      const extraSuffix =
+        (showWeekly
+          ? formatWindowSuffix("Week", usage.weekly, isRemaining, isCondensed)
+          : "") +
+        (showMcp
+          ? formatWindowSuffix("MCP", usage.mcp, isRemaining, isCondensed)
+          : "");
+      statusBarItem.text = getLabel(suffix + extraSuffix);
 
       // Build tooltip text (the tooltip always shows the full details)
       const resetTooltip = resetStr
         ? ` — resets in ${resetStr.replace(/[()]/g, "")}`
         : "";
-      const weeklyResetStr = usage.weekly
-        ? formatResetTime(usage.weekly.nextResetTime)
-        : "";
-      const weeklyTooltip =
-        showWeekly && usage.weekly
-          ? `\nWeekly ${displayMode}: ${toDisplayPercentage(usage.weekly.percentage, isRemaining)}%` +
-            (weeklyResetStr
-              ? ` — resets in ${weeklyResetStr.replace(/[()]/g, "")}`
-              : "")
-          : "";
+      /**
+       * Builds a tooltip line for an optional quota window, e.g.
+       * `"Weekly usage: 12% — resets in 3d12h"`, or `""` when unavailable or hidden.
+       */
+      const tooltipLine = (label: string, windowUsage: WindowUsage | null) => {
+        if (!windowUsage) {
+          return "";
+        }
+        const windowResetStr = formatResetTime(windowUsage.nextResetTime);
+        return (
+          `\n${label} ${displayMode}: ${toDisplayPercentage(windowUsage.percentage, isRemaining)}%` +
+          (windowResetStr
+            ? ` — resets in ${windowResetStr.replace(/[()]/g, "")}`
+            : "")
+        );
+      };
       statusBarItem.tooltip =
         `z.ai token ${displayMode}: ${displayPercentage}%${resetTooltip}` +
-        weeklyTooltip +
+        (showWeekly ? tooltipLine("Weekly", usage.weekly) : "") +
+        (showMcp ? tooltipLine("MCP", usage.mcp) : "") +
         `\n(auto-refreshes every ${refreshSec}s. click to refresh immediately)`;
     }
 
@@ -614,9 +633,9 @@ export function activate(context: vscode.ExtensionContext): void {
      * Listens for workspace configuration changes and re-applies them immediately.
      *
      * When `zaiUsagePlus.refreshInterval`, `zaiUsagePlus.useIcon`, `zaiUsagePlus.displayMode`,
-     * `zaiUsagePlus.displayStyle`, or `zaiUsagePlus.showWeekly` changes, the status bar is
-     * refreshed and the polling interval is restarted so the new settings take effect
-     * without requiring a window reload.
+     * `zaiUsagePlus.displayStyle`, `zaiUsagePlus.showWeekly`, or `zaiUsagePlus.showMcp` changes,
+     * the status bar is refreshed and the polling interval is restarted so the new settings
+     * take effect without requiring a window reload.
      *
      * When `zaiUsagePlus.statusBarPriority` changes, the user is notified that a window
      * reload is required for the new priority to take effect, because the priority is
@@ -628,7 +647,8 @@ export function activate(context: vscode.ExtensionContext): void {
         e.affectsConfiguration("zaiUsagePlus.useIcon") ||
         e.affectsConfiguration("zaiUsagePlus.displayMode") ||
         e.affectsConfiguration("zaiUsagePlus.displayStyle") ||
-        e.affectsConfiguration("zaiUsagePlus.showWeekly")
+        e.affectsConfiguration("zaiUsagePlus.showWeekly") ||
+        e.affectsConfiguration("zaiUsagePlus.showMcp")
       ) {
         updateStatusBar();
         startInterval();
