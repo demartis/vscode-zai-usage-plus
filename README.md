@@ -30,14 +30,14 @@
 
 |                Situation                 |              Display               |
 | ---------------------------------------- | ---------------------------------- |
-| Authenticated, usage available           | `⬡ 45% (2h30m) | Week: 12% (3d12h)` |
-| Authenticated, no reset times            | `⬡ 45% | Week: 12%`                |
-| Authenticated, remaining mode            | `⬡ 55% (2h30m) | Week: 88% (3d12h)` |
-| Authenticated, condensed style           | `⬡ 45% | Week: 12%`                |
-| Authenticated, weekly hidden             | `⬡ 45% (2h30m)`                    |
-| No weekly entry in API response          | `⬡ 45% (2h30m)`                    |
-| API key not set                          | `⬡ Set API Key`                    |
-| Error / fetch failed                     | `⬡ -`                              |
+| Authenticated, usage available           | `Z 45% (2h30m) | Week: 12% (3d12h)` |
+| Authenticated, no reset times            | `Z 45% | Week: 12%`                |
+| Authenticated, remaining mode            | `Z 55% (2h30m) | Week: 88% (3d12h)` |
+| Authenticated, condensed style           | `Z 45% | Week: 12%`                |
+| Authenticated, weekly hidden             | `Z 45% (2h30m)`                    |
+| No weekly entry in API response          | `Z 45% (2h30m)`                    |
+| API key not set                          | `Z Set API Key`                    |
+| Error / fetch failed                     | `Z -`                              |
 
 > The `⬡` icon is the z.ai icon. Set `zaiUsagePlus.useIcon: false` to display `z.ai:` as a text prefix instead. The tooltip always shows the full details (percentages, reset countdowns, refresh interval) regardless of display style.
 
