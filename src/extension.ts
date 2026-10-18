@@ -401,21 +401,6 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   /**
-   * Fetches the latest usage data and updates the status bar item accordingly.
-   *
-   * Possible outcomes:
-   * - **No API key**: delegates to {@link applyNoApiKeyState} to prompt the user.
-   * - **Fetch failure**: displays a dash and an error tooltip.
-   * - **Success**: renders the usage percentage and optional reset countdown; also
-   *   shows a tooltip with full details and the configured refresh interval.
-   *
-   * After a successful live API call ({@link fetchUsage} returns `apiCalled: true`),
-   * the polling interval is restarted via {@link startInterval} so that the next
-   * refresh is scheduled relative to the moment fresh data was obtained.
-   *
-   * @returns A promise that resolves once the status bar has been updated.
-   */
-  /**
    * Converts a usage percentage to the value shown in the status bar, taking the
    * display mode into account.
    *
@@ -433,24 +418,46 @@ export function activate(context: vscode.ExtensionContext): void {
   /**
    * Builds the weekly portion of the status bar label, e.g. `" | Week: 12% (3d12h)"`.
    *
-   * Returns an empty string when there is no weekly entry in the API response.
+   * Returns an empty string when the weekly entry is absent or hidden by the
+   * `showWeekly` setting; in condensed style the reset countdown is omitted.
    *
    * @param weekly - The {@link WeeklyUsage} from the API, or `null`.
    * @param isRemaining - Whether the "remaining" display mode is active.
-   * @returns The weekly label fragment, or `""` when unavailable.
+   * @param isCondensed - Whether the "condensed" display style is active.
+   * @returns The weekly label fragment, or `""` when unavailable or hidden.
    */
   function formatWeeklySuffix(
     weekly: WeeklyUsage | null,
     isRemaining: boolean,
+    isCondensed: boolean,
   ): string {
     if (!weekly) {
       return "";
     }
-    const resetStr = formatResetTime(weekly.nextResetTime);
     const percentage = toDisplayPercentage(weekly.percentage, isRemaining);
+    const resetStr = isCondensed ? "" : formatResetTime(weekly.nextResetTime);
     return ` | Week: ${percentage}%${resetStr ? ` ${resetStr}` : ""}`;
   }
 
+  /**
+   * Fetches the latest usage data and updates the status bar item accordingly.
+   *
+   * Possible outcomes:
+   * - **No API key**: delegates to {@link applyNoApiKeyState} to prompt the user.
+   * - **Fetch failure**: displays a dash and an error tooltip.
+   * - **Success**: renders the usage percentage and optional reset countdown; also
+   *   shows a tooltip with full details and the configured refresh interval.
+   *
+   * The `displayStyle` setting controls the label verbosity: "full" shows
+   * percentages with reset countdowns, "condensed" shows bare percentages.
+   * The `showWeekly` setting toggles the weekly window on or off.
+   *
+   * After a successful live API call ({@link fetchUsage} returns `apiCalled: true`),
+   * the polling interval is restarted via {@link startInterval} so that the next
+   * refresh is scheduled relative to the moment fresh data was obtained.
+   *
+   * @returns A promise that resolves once the status bar has been updated.
+   */
   async function updateStatusBar(): Promise<void> {
     const { usage, apiCalled, noApiKey } = await fetchUsage();
 
@@ -466,38 +473,46 @@ export function activate(context: vscode.ExtensionContext): void {
       const refreshSec = getRefreshInterval() / 1000;
       const resetStr = formatResetTime(usage.nextResetTime);
 
-      // Get display mode setting (default: "usage")
-      const displayMode = vscode.workspace
-        .getConfiguration("zaiUsagePlus")
-        .get<string>("displayMode", "usage");
+      const config = vscode.workspace.getConfiguration("zaiUsagePlus");
+      // Get display settings (defaults: "usage" mode, "full" style, weekly shown)
+      const displayMode = config.get<string>("displayMode", "usage");
+      const displayStyle = config.get<string>("displayStyle", "full");
+      const showWeekly = config.get<boolean>("showWeekly", true);
 
       // Calculate display percentage based on display mode
       const isRemaining = displayMode === "remaining";
+      const isCondensed = displayStyle === "condensed";
       const displayPercentage = toDisplayPercentage(
         usage.percentage,
         isRemaining,
       );
 
-      const suffix = resetStr
-        ? `${displayPercentage}% ${resetStr}`
-        : `${displayPercentage}%`;
+      const suffix = isCondensed
+        ? `${displayPercentage}%`
+        : resetStr
+          ? `${displayPercentage}% ${resetStr}`
+          : `${displayPercentage}%`;
       statusBarItem.text = getLabel(
-        suffix + formatWeeklySuffix(usage.weekly, isRemaining),
+        suffix +
+          (showWeekly
+            ? formatWeeklySuffix(usage.weekly, isRemaining, isCondensed)
+            : ""),
       );
 
-      // Build tooltip text
+      // Build tooltip text (the tooltip always shows the full details)
       const resetTooltip = resetStr
         ? ` — resets in ${resetStr.replace(/[()]/g, "")}`
         : "";
       const weeklyResetStr = usage.weekly
         ? formatResetTime(usage.weekly.nextResetTime)
         : "";
-      const weeklyTooltip = usage.weekly
-        ? `\nWeekly ${displayMode}: ${toDisplayPercentage(usage.weekly.percentage, isRemaining)}%` +
-          (weeklyResetStr
-            ? ` — resets in ${weeklyResetStr.replace(/[()]/g, "")}`
-            : "")
-        : "";
+      const weeklyTooltip =
+        showWeekly && usage.weekly
+          ? `\nWeekly ${displayMode}: ${toDisplayPercentage(usage.weekly.percentage, isRemaining)}%` +
+            (weeklyResetStr
+              ? ` — resets in ${weeklyResetStr.replace(/[()]/g, "")}`
+              : "")
+          : "";
       statusBarItem.tooltip =
         `z.ai token ${displayMode}: ${displayPercentage}%${resetTooltip}` +
         weeklyTooltip +
@@ -598,9 +613,10 @@ export function activate(context: vscode.ExtensionContext): void {
     /**
      * Listens for workspace configuration changes and re-applies them immediately.
      *
-     * When `zaiUsagePlus.refreshInterval`, `zaiUsagePlus.useIcon`, or `zaiUsagePlus.displayMode` changes,
-     * the status bar is refreshed and the polling interval is restarted so the new settings take
-     * effect without requiring a window reload.
+     * When `zaiUsagePlus.refreshInterval`, `zaiUsagePlus.useIcon`, `zaiUsagePlus.displayMode`,
+     * `zaiUsagePlus.displayStyle`, or `zaiUsagePlus.showWeekly` changes, the status bar is
+     * refreshed and the polling interval is restarted so the new settings take effect
+     * without requiring a window reload.
      *
      * When `zaiUsagePlus.statusBarPriority` changes, the user is notified that a window
      * reload is required for the new priority to take effect, because the priority is
@@ -610,7 +626,9 @@ export function activate(context: vscode.ExtensionContext): void {
       if (
         e.affectsConfiguration("zaiUsagePlus.refreshInterval") ||
         e.affectsConfiguration("zaiUsagePlus.useIcon") ||
-        e.affectsConfiguration("zaiUsagePlus.displayMode")
+        e.affectsConfiguration("zaiUsagePlus.displayMode") ||
+        e.affectsConfiguration("zaiUsagePlus.displayStyle") ||
+        e.affectsConfiguration("zaiUsagePlus.showWeekly")
       ) {
         updateStatusBar();
         startInterval();

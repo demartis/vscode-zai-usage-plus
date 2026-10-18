@@ -85,6 +85,21 @@
             "Display remaining tokens (e.g. 24.7%)"
           ],
           "description": "Whether to display token usage or remaining tokens in the status bar."
+        },
+        "zaiUsagePlus.displayStyle": {
+          "type": "string",
+          "enum": ["full", "condensed"],
+          "default": "full",
+          "enumDescriptions": [
+            "Show percentages with reset countdowns (e.g. 45% (2h30m) | Week: 12% (3d12h))",
+            "Show bare percentages only (e.g. 45% | Week: 12%)"
+          ],
+          "description": "How verbose the status bar label should be. The tooltip always shows full details."
+        },
+        "zaiUsagePlus.showWeekly": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the weekly token usage alongside the 5-hour usage in the status bar."
         }
       }
     }
