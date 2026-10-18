@@ -121,7 +121,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const useIcon = vscode.workspace
       .getConfiguration("zaiUsagePlus")
       .get<boolean>("useIcon", true);
-    const prefix = useIcon ? "$(zai-icon)" : "z.ai:";
+    const prefix = useIcon ? "$(zai-icon-plus)" : "z.ai:";
     return `${prefix} ${suffix}`;
   }
 
