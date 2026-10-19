@@ -2,7 +2,7 @@
   "name": "vscode-zai-usage-plus",
   "displayName": "Z.ai GLM Usage Plus",
   "description": "Display z.ai token usage in the status bar",
-  "version": "0.5.2",
+  "version": "0.6.1",
   "publisher": "demartis",
   "license": "MIT",
   "icon": "icon.png",
@@ -91,9 +91,9 @@
           "enum": ["full", "condensed", "ultra"],
           "default": "full",
           "enumDescriptions": [
-            "Full labels with reset countdowns (e.g. 45% (2h30m) | Week: 12% (3d12h))",
-            "Short labels with reset countdowns (e.g. 45% (2h30m) | W: 12% (3d12h))",
-            "Short labels, bare percentages only (e.g. 45% | W: 12%)"
+            "Full labels, decimal percentages, parenthesised reset countdowns (e.g. 45.3% (2h30m) | Week: 12.4% (3d12h))",
+            "Short labels, integer percentages, bare reset countdowns (e.g. 45% 2h30m · W 12% 3d12h)",
+            "Short labels, bare percentages only (e.g. 45% · W 12%)"
           ],
           "description": "How verbose the status bar label should be. The tooltip always shows full details."
         },

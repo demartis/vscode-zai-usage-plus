@@ -237,7 +237,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   /**
    * Formats the time remaining until the next usage quota reset into a short
-   * human-readable string such as `"(2h30m)"`, `"(45m)"`, or `"(3d12h)"`
+   * bare human-readable string such as `"2h30m"`, `"45m"`, or `"3d12h"`
    * for windows longer than a day.
    *
    * Returns an empty string when `nextResetTime` is falsy, non-positive, or
@@ -245,7 +245,7 @@ export function activate(context: vscode.ExtensionContext): void {
    *
    * @param nextResetTime - The Unix timestamp (in milliseconds) of the next reset,
    *   or `null` if unknown.
-   * @returns A formatted countdown string like `"(1h5m)"`, or `""` if not applicable.
+   * @returns A formatted countdown string like `"1h5m"`, or `""` if not applicable.
    */
   function formatResetTime(nextResetTime: number | null): string {
     if (!nextResetTime || nextResetTime <= 0) {
@@ -266,7 +266,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (diffHours > 0) parts.push(`${diffHours}h`);
       parts.push(`${diffMins}m`);
     }
-    return `(${parts.join("")})`;
+    return parts.join("");
   }
 
   /**
@@ -407,45 +407,64 @@ export function activate(context: vscode.ExtensionContext): void {
 
   /**
    * Converts a usage percentage to the value shown in the status bar, taking the
-   * display mode into account.
+   * display mode and the desired precision into account.
    *
    * @param percentage - The usage percentage (0-100) as returned by the API.
    * @param isRemaining - Whether the "remaining" display mode is active.
-   * @returns The display percentage (one decimal place).
+   * @param decimals - Number of decimal places to keep (default `1`).
+   * @returns The display percentage rounded to `decimals` places.
    */
   function toDisplayPercentage(
     percentage: number,
     isRemaining: boolean,
+    decimals = 1,
   ): number {
-    return isRemaining ? Math.round((100 - percentage) * 10) / 10 : percentage;
+    const factor = 10 ** decimals;
+    const value = isRemaining ? 100 - percentage : percentage;
+    return Math.round(value * factor) / factor;
   }
 
   /**
-   * Builds the label fragment for an optional quota window, e.g.
-   * `" | Week: 12% (3d12h)"` or `" | MCP: 5% (12d4h)"`.
+   * Builds the label fragment for an optional quota window.
    *
-   * Returns an empty string when the window entry is absent; when
-   * `includeReset` is `false` (ultra-condensed style) the reset countdown
-   * is omitted.
+   * The rendering depends on the display style:
+   * - `"full"`: `" | Week: 12.4% (3d12h)"` — full label, colon, parenthesised reset.
+   * - `"condensed"`: `" · W 12% 3d12h"` — short label, dot separator, bare reset.
+   * - `"ultra"`: `" · W 12%"` — short label, no reset countdown.
    *
-   * @param label - The window name shown in the label (e.g. `"Week"`, `"W"`, `"MCP"`).
+   * Returns an empty string when the window entry is absent.
+   *
+   * @param fullLabel - The window name for the full style (e.g. `"Week"`, `"MCP"`).
+   * @param shortLabel - The window name for the condensed styles (e.g. `"W"`, `"MCP"`).
    * @param usage - The {@link WindowUsage} for this window, or `null`.
    * @param isRemaining - Whether the "remaining" display mode is active.
-   * @param includeReset - Whether to append the reset countdown.
+   * @param displayStyle - The active display style.
    * @returns The label fragment, or `""` when unavailable.
    */
   function formatWindowSuffix(
-    label: string,
+    fullLabel: string,
+    shortLabel: string,
     usage: WindowUsage | null,
     isRemaining: boolean,
-    includeReset: boolean,
+    displayStyle: string,
   ): string {
     if (!usage) {
       return "";
     }
-    const percentage = toDisplayPercentage(usage.percentage, isRemaining);
-    const resetStr = includeReset ? formatResetTime(usage.nextResetTime) : "";
-    return ` | ${label}: ${percentage}%${resetStr ? ` ${resetStr}` : ""}`;
+    const isFull = displayStyle === "full";
+    const isUltra = displayStyle === "ultra";
+    const label = isFull ? fullLabel : shortLabel;
+    const percentage = toDisplayPercentage(
+      usage.percentage,
+      isRemaining,
+      isFull ? 1 : 0,
+    );
+    // Reset countdowns render bare ("2h30m"); only the full style wraps them in
+    // parentheses, so the condensed styles read lighter and keep the accent on
+    // the percentage.
+    const resetStr = isUltra ? "" : formatResetTime(usage.nextResetTime);
+    const reset = resetStr ? (isFull ? ` (${resetStr})` : ` ${resetStr}`) : "";
+    return `${isFull ? " | " : " · "}${label}${isFull ? ":" : ""} ${percentage}%${reset}`;
   }
 
   /**
@@ -458,8 +477,10 @@ export function activate(context: vscode.ExtensionContext): void {
    *   shows a tooltip with full details and the configured refresh interval.
    *
    * The `displayStyle` setting controls the label verbosity: "full" shows full
-   * window labels with reset countdowns, "condensed" shows short window labels
-   * with reset countdowns, and "ultra" shows short labels with bare percentages.
+   * window labels, decimal percentages and parenthesised reset countdowns
+   * (`45.3% (2h30m) | Week: 12.4% (3d12h)`); "condensed" shows short labels,
+   * integer percentages and bare reset countdowns (`45% 2h30m · W 12% 3d12h`);
+   * "ultra" shows short labels with bare percentages only (`45% · W 12%`).
    * The `showWeekly` and `showMcp` settings toggle the weekly and MCP
    * windows on or off.
    *
@@ -493,37 +514,42 @@ export function activate(context: vscode.ExtensionContext): void {
 
       // Calculate display percentage based on display mode
       const isRemaining = displayMode === "remaining";
-      // "ultra" drops the reset countdowns; non-"full" styles use short window labels
+      const isFull = displayStyle === "full";
+      // "ultra" drops the reset countdowns; only the full style keeps parentheses,
+      // window colons and decimal precision — the condensed styles read lighter
+      // and put the visual weight on the percentages.
       const isUltra = displayStyle === "ultra";
-      const shortLabels = displayStyle !== "full";
       const displayPercentage = toDisplayPercentage(
         usage.percentage,
         isRemaining,
+        isFull ? 1 : 0,
       );
 
-      const suffix = isUltra
-        ? `${displayPercentage}%`
-        : resetStr
-          ? `${displayPercentage}% ${resetStr}`
-          : `${displayPercentage}%`;
+      const reset = resetStr ? (isFull ? ` (${resetStr})` : ` ${resetStr}`) : "";
+      const suffix = `${displayPercentage}%${isUltra ? "" : reset}`;
       const extraSuffix =
         (showWeekly
           ? formatWindowSuffix(
-              shortLabels ? "W" : "Week",
+              "Week",
+              "W",
               usage.weekly,
               isRemaining,
-              !isUltra,
+              displayStyle,
             )
           : "") +
         (showMcp
-          ? formatWindowSuffix("MCP", usage.mcp, isRemaining, !isUltra)
+          ? formatWindowSuffix(
+              "MCP",
+              "MCP",
+              usage.mcp,
+              isRemaining,
+              displayStyle,
+            )
           : "");
       statusBarItem.text = getLabel(suffix + extraSuffix);
 
       // Build tooltip text (the tooltip always shows the full details)
-      const resetTooltip = resetStr
-        ? ` — resets in ${resetStr.replace(/[()]/g, "")}`
-        : "";
+      const resetTooltip = resetStr ? ` — resets in ${resetStr}` : "";
       /**
        * Builds a tooltip line for an optional quota window, e.g.
        * `"Weekly usage: 12% — resets in 3d12h"`, or `""` when unavailable or hidden.
@@ -535,9 +561,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const windowResetStr = formatResetTime(windowUsage.nextResetTime);
         return (
           `\n${label} ${displayMode}: ${toDisplayPercentage(windowUsage.percentage, isRemaining)}%` +
-          (windowResetStr
-            ? ` — resets in ${windowResetStr.replace(/[()]/g, "")}`
-            : "")
+          (windowResetStr ? ` — resets in ${windowResetStr}` : "")
         );
       };
       statusBarItem.tooltip =

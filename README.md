@@ -14,8 +14,10 @@
 
 ![Ultra display style](./assets/screenshots/style-ultra.png)
 
-> [!NOTE]
-> This is a fork of [j4rviscmd/vscode-zai-usage](https://github.com/j4rviscmd/vscode-zai-usage) — all credit for the original extension goes to [@j4rviscmd](https://github.com/j4rviscmd). This fork adds weekly and MCP quota display and extra display settings under the name **Z.ai GLM Usage Plus**.
+**`condensed` + `showMcp: false`** (simple)
+
+![Simple display style — condensed without MCP](./assets/screenshots/style-simple.png)
+
 
 [![Latest Release](https://img.shields.io/github/v/release/demartis/vscode-zai-usage-plus?style=for-the-badge&color=green&label=Latest&logo=github&logoColor=white)](https://github.com/demartis/vscode-zai-usage-plus/releases/latest)
 [![Last Commit](https://img.shields.io/github/last-commit/demartis/vscode-zai-usage-plus/main?style=for-the-badge&color=1F6FEB&label=Last%20Update&logo=github&logoColor=white)](https://github.com/demartis/vscode-zai-usage-plus/commits/main)
@@ -28,9 +30,9 @@
 
 ## Features
 
-- Shows all token quota windows side by side: the 5-hour window, the **weekly window**, and the **MCP quota** (e.g. `⬡ 45% (2h30m) | Week: 12% (3d12h) | MCP: 5% (12d4h)`)
+- Shows all token quota windows side by side: the 5-hour window, the **weekly window**, and the **MCP quota** (e.g. `⬡ 45.3% (2h30m) | Week: 12.4% (3d12h) | MCP: 5.2% (12d4h)`)
 - Displays time remaining until each quota resets when available
-- Condensed display style for a minimal status bar label (e.g. `⬡ 45% | Week: 12%`)
+- Condensed display style for a minimal status bar label (e.g. `⬡ 45% 2h30m · W 12% 3d12h`)
 - Shows usage or remaining tokens (`displayMode`)
 - The weekly and MCP windows can each be hidden entirely (`showWeekly`, `showMcp`)
 - Automatically refreshes at a configurable interval
@@ -40,14 +42,14 @@
 
 |                Situation                 |              Display               |
 | ---------------------------------------- | ---------------------------------- |
-| Authenticated, usage available           | `Z 45% (2h30m) | Week: 12% (3d12h)` |
-| Authenticated, no reset times            | `Z 45% | Week: 12%`                |
-| Authenticated, remaining mode            | `Z 55% (2h30m) | Week: 88% (3d12h)` |
-| Authenticated, condensed style           | `Z 45% (2h30m) | W: 12% (3d12h)`   |
-| Authenticated, ultra-condensed style     | `Z 45% | W: 12%`                   |
-| Authenticated, with MCP quota            | `Z 45% (2h30m) | Week: 12% (3d12h) | MCP: 5% (12d4h)` |
-| Authenticated, weekly hidden             | `Z 45% (2h30m)`                    |
-| No weekly entry in API response          | `Z 45% (2h30m)`                    |
+| Authenticated, usage available           | `Z 45.3% (2h30m) \| Week: 12.4% (3d12h)` |
+| Authenticated, no reset times            | `Z 45.3% \| Week: 12.4%`            |
+| Authenticated, remaining mode            | `Z 54.7% (2h30m) \| Week: 87.6% (3d12h)` |
+| Authenticated, condensed style           | `Z 45% 2h30m · W 12% 3d12h`         |
+| Authenticated, ultra-condensed style     | `Z 45% · W 12%`                     |
+| Authenticated, with MCP quota            | `Z 45.3% (2h30m) \| Week: 12.4% (3d12h) \| MCP: 5.2% (12d4h)` |
+| Authenticated, weekly hidden             | `Z 45.3% (2h30m)`                   |
+| No weekly entry in API response          | `Z 45.3% (2h30m)`                   |
 | API key not set                          | `Z Set API Key`                    |
 | Error / fetch failed                     | `Z -`                              |
 
@@ -75,7 +77,7 @@
 | `zaiUsagePlus.refreshInterval`     | `number`  | `60`      | Data refresh interval in seconds                                                         |
 | `zaiUsagePlus.useIcon`             | `boolean` | `true`    | Use z.ai icon (`⬡`) instead of text prefix `z.ai:`                                       |
 | `zaiUsagePlus.displayMode`         | `string`  | `usage`   | Display mode: `"usage"` (e.g. `75.3%`) or `"remaining"` (e.g. `24.7%`)                   |
-| `zaiUsagePlus.displayStyle`        | `string`  | `full`    | Label verbosity: `"full"` (`45% (2h30m) | Week: 12%`), `"condensed"` (`45% (2h30m) | W: 12%`), or `"ultra"` (`45% | W: 12%`) |
+| `zaiUsagePlus.displayStyle`        | `string`  | `full`    | Label verbosity: `"full"` (`45.3% (2h30m) \| Week: 12.4% (3d12h)`), `"condensed"` (`45% 2h30m · W 12% 3d12h`), or `"ultra"` (`45% · W 12%`) |
 | `zaiUsagePlus.showWeekly`          | `boolean` | `true`    | Show the weekly usage alongside the 5-hour usage                                         |
 | `zaiUsagePlus.showMcp`             | `boolean` | `true`    | Show the MCP quota alongside the other windows                                           |
 | `zaiUsagePlus.statusBarPriority`   | `number`  | `10000`   | Status bar item priority (higher = further left; requires a window reload)               |
@@ -88,6 +90,9 @@
 ## Credits
 
 Based on [vscode-zai-usage](https://github.com/j4rviscmd/vscode-zai-usage) by [@j4rviscmd](https://github.com/j4rviscmd) (MIT). Weekly usage display, display-style and weekly-visibility settings added by this fork.
+
+> [!NOTE]
+> This is a fork of [j4rviscmd/vscode-zai-usage](https://github.com/j4rviscmd/vscode-zai-usage) — all credit for the original extension goes to [@j4rviscmd](https://github.com/j4rviscmd). This fork adds weekly and MCP quota display and extra display settings under the name **Z.ai GLM Usage Plus**.
 
 ## License
 
